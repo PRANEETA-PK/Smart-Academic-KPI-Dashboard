@@ -1,41 +1,64 @@
-import React, { createContext, useContext, useState, useCallback } from "react";
-import { User, Role } from "@/types";
-import { students, faculty, credentials } from "@/data/mockData";
+import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
+import { User } from "@/types";
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => { success: boolean; message: string };
+  login: (email: string, password: string) => Promise<{ success: boolean; message: string; user?: User }>;
   logout: () => void;
   isAuthenticated: boolean;
+  token: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+const API_URL = "http://localhost:5000/api";
 
-  const login = useCallback((email: string, password: string) => {
-    if (email === credentials.student.email && password === credentials.student.password) {
-      const s = students[0];
-      setUser({ id: s.id, name: s.name, email: s.email, role: "student" });
-      return { success: true, message: "Login successful" };
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(() => {
+    const savedUser = localStorage.getItem("user");
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
+  const [token, setToken] = useState<string | null>(localStorage.getItem("token"));
+
+  const login = useCallback(async (email: string, password: string) => {
+    try {
+      const response = await fetch(`${API_URL}/users/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        const newUser = {
+          id: data._id,
+          name: data.name,
+          email: data.email,
+          role: data.role,
+        };
+        setUser(newUser);
+        setToken(data.token);
+        localStorage.setItem("user", JSON.stringify(newUser));
+        localStorage.setItem("token", data.token);
+        return { success: true, message: "Login successful", user: newUser };
+      } else {
+        return { success: false, message: data.message || "Invalid credentials" };
+      }
+    } catch (error) {
+      return { success: false, message: "Server connection failed" };
     }
-    if (email === credentials.faculty.email && password === credentials.faculty.password) {
-      const f = faculty[0];
-      setUser({ id: f.id, name: f.name, email: f.email, role: "faculty" });
-      return { success: true, message: "Login successful" };
-    }
-    if (email === credentials.admin.email && password === credentials.admin.password) {
-      setUser({ id: "admin1", name: "System Admin", email: credentials.admin.email, role: "admin" });
-      return { success: true, message: "Login successful" };
-    }
-    return { success: false, message: "Invalid email or password" };
   }, []);
 
-  const logout = useCallback(() => setUser(null), []);
+  const logout = useCallback(() => {
+    setUser(null);
+    setToken(null);
+    localStorage.removeItem("user");
+    localStorage.removeItem("token");
+  }, []);
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user, token }}>
       {children}
     </AuthContext.Provider>
   );

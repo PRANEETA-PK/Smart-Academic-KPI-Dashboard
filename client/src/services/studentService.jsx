@@ -30,5 +30,15 @@ export const studentService = {
             console.error("Error fetching student by ID:", error);
             return null;
         }
+    },
+
+    bulkUpload: async (studentsData) => {
+        try {
+            const response = await axios.post("/api/students/bulk", studentsData);
+            return response.data;
+        } catch (error) {
+            console.error("Error in bulk upload:", error);
+            throw error;
+        }
     }
 };

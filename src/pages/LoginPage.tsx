@@ -12,18 +12,19 @@ const LoginPage = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     if (isSignUp) {
       setError("Sign up is a demo placeholder. Use Quick Login buttons below.");
       return;
     }
-    const result = login(email, password);
-    if (result.success) {
-      if (email === credentials.admin.email) navigate("/admin");
-      else if (email === credentials.student.email) navigate("/student");
-      else navigate("/faculty");
+    const result = await login(email, password);
+    if (result.success && result.user) {
+      const role = result.user.role;
+      if (role === "admin") navigate("/admin");
+      else if (role === "faculty") navigate("/faculty");
+      else navigate("/student");
     } else {
       setError(result.message);
     }

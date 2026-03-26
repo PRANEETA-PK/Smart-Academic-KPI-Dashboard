@@ -17,11 +17,19 @@ const userSchema = mongoose.Schema(
             type: String,
             required: true,
         },
+        department: {
+            type: String,
+            required: false,
+        },
         role: {
             type: String,
             required: true,
             enum: ['student', 'faculty', 'admin'],
             default: 'student',
+        },
+        active: {
+            type: Boolean,
+            default: true,
         },
     },
     {
@@ -33,9 +41,9 @@ userSchema.methods.matchPassword = async function (enteredPassword) {
     return await bcrypt.compare(enteredPassword, this.password);
 };
 
-userSchema.pre('save', async function (next) {
+userSchema.pre('save', async function () {
     if (!this.isModified('password')) {
-        next();
+        return;
     }
 
     const salt = await bcrypt.genSalt(10);

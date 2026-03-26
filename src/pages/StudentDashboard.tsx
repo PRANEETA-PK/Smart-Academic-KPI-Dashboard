@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Navbar from "@/components/layout/Navbar";
 import KPICard from "@/components/common/KPICard";
 import { SubjectBarChart, SGPATrendChart, CGPALineChart } from "@/components/charts/AcademicCharts";
@@ -7,19 +7,47 @@ import WhatIfCalculator from "@/components/common/WhatIfCalculator";
 import { StudentAlerts } from "@/components/common/SmartAlerts";
 import AcademicReportPDF from "@/components/common/AcademicReportPDF";
 import { useAuth } from "@/context/AuthContext";
-import { students } from "@/data/mockData";
-import { CalendarCheck, TrendingUp, Award, ChevronDown } from "lucide-react";
+import { CalendarCheck, TrendingUp, Award, ChevronDown, Briefcase, Building2, CheckCircle2, Clock, XCircle } from "lucide-react";
 
 const StudentDashboard = () => {
-  const { user } = useAuth();
-  const student = students.find((s) => s.email === user?.email) || students[0];
-  const [selectedSemester, setSelectedSemester] = useState(student.semesters.length - 1);
+  const { token } = useAuth();
+  const [student, setStudent] = useState<any>(null);
+  const [selectedSemester, setSelectedSemester] = useState(0);
+  const [loading, setLoading] = useState(true);
 
-  const currentSemester = student.semesters[selectedSemester];
+  useEffect(() => {
+    const fetchStudentData = async () => {
+      try {
+        const res = await fetch("http://localhost:5000/api/students/dashboard", {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setStudent(data);
+          setSelectedSemester(data.semesters.length - 1);
+        }
+      } catch (err) {
+        console.error("Fetch error:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (token) fetchStudentData();
+  }, [token]);
+
+  if (loading || !student) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+      </div>
+    );
+  }
+
+  const currentSemester = student.semesters[selectedSemester] || { sgpa: 0, subjects: [], semesterName: "N/A" };
   const latestSGPA = currentSemester.sgpa;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background text-foreground">
       <Navbar />
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
         <div className="mb-8 flex flex-wrap items-center justify-between gap-4 animate-fade-in">
@@ -27,8 +55,11 @@ const StudentDashboard = () => {
             <h1 className="font-display text-2xl font-bold text-foreground">
               Welcome back, <span className="text-gradient-primary">{student.name}</span>
             </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-1 text-sm text-muted-foreground flex items-center gap-2">
               {student.department} · {student.rollNumber}
+              <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary italic uppercase tracking-wider">
+                {student.semesters.length} / 8 Semesters Completed
+              </span>
             </p>
           </div>
           <AcademicReportPDF student={student} />
@@ -39,39 +70,126 @@ const StudentDashboard = () => {
         </div>
 
         <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <KPICard title="Attendance" value={`${student.attendance}%`} icon={CalendarCheck} variant={student.attendance < 65 ? "destructive" : "primary"} />
-          <KPICard title="Current SGPA" value={latestSGPA.toFixed(1)} icon={TrendingUp} variant="success" trend={`${currentSemester.semesterName}`} />
-          <KPICard title="CGPA" value={student.cgpa.toFixed(1)} icon={Award} variant={student.cgpa < 6 ? "warning" : "primary"} />
+          <KPICard title="Semester Attendance" value={`${student.attendance}%`} icon={CalendarCheck} variant={student.attendance < 75 ? "destructive" : "primary"} trend={currentSemester.semesterName} />
+          <KPICard title="Semester SGPA" value={Number(currentSemester.sgpa || 0).toFixed(2)} icon={TrendingUp} variant="success" trend={currentSemester.semesterName} />
+          <KPICard title="Cumulative CGPA" value={Number(student.cgpa).toFixed(2)} icon={Award} variant={student.cgpa < 7 ? "warning" : "primary"} />
         </div>
 
-        <div className="mb-6 flex items-center gap-3">
-          <label className="text-sm font-medium text-muted-foreground">Semester:</label>
-          <div className="relative">
-            <select
-              value={selectedSemester}
-              onChange={(e) => setSelectedSemester(Number(e.target.value))}
-              className="appearance-none rounded-lg border border-input bg-card py-2 pl-3 pr-8 text-sm font-medium text-foreground outline-none transition-colors focus:border-primary"
-            >
-              {student.semesters.map((sem, idx) => (
-                <option key={sem.semesterName} value={idx}>{sem.semesterName}</option>
-              ))}
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        {/* Feature: Placement Tracker (Dynamic based on year) */}
+        <div className="mb-8 overflow-hidden rounded-2xl border border-border bg-card shadow-card">
+          <div className="flex items-center gap-3 border-b border-border bg-muted/30 p-6">
+            <Briefcase className="h-6 w-6 text-primary" />
+            <div>
+              <h3 className="font-display text-lg font-semibold">Placement Tracker</h3>
+              <p className="text-xs text-muted-foreground">Available for 3rd & 4th year students</p>
+            </div>
+          </div>
+
+          <div className="p-6">
+            {student.yearOfStudy < 3 ? (
+              <div className="flex flex-col items-center justify-center py-10 text-center">
+                <div className="rounded-full bg-muted p-4 mb-4">
+                  <Clock className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <h4 className="font-semibold text-muted-foreground">No Placement Data Found</h4>
+                <p className="max-w-xs text-sm text-muted-foreground mt-2">Placements typically begin in the 6th semester (Year 3). Stay focused on your academics!</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {student.placementData && student.placementData.length > 0 ? (
+                  student.placementData.map((p: any, idx: number) => (
+                    <div key={idx} className="group relative rounded-xl border border-border bg-background p-4 transition-all hover:border-primary/50 hover:shadow-glow-soft">
+                      <div className="mb-3 flex items-center justify-between">
+                        <Building2 className="h-5 w-5 text-primary" />
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${p.status === 'Selected' ? 'bg-success/10 text-success' :
+                          p.status === 'Rejected' ? 'bg-destructive/10 text-destructive' : 'bg-warning/10 text-warning'
+                          }`}>
+                          {p.status}
+                        </span>
+                      </div>
+                      <h4 className="font-bold text-foreground">{p.companyName}</h4>
+                      <p className="text-xs text-muted-foreground mb-3">{p.role}</p>
+
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-[10px] text-muted-foreground font-medium">
+                          <span>Hiring Rounds</span>
+                          <span>{p.roundsCleared} / {p.totalRounds} Cleared</span>
+                        </div>
+                        <div className="flex gap-1">
+                          {Array.from({ length: p.totalRounds }).map((_, i) => (
+                            <div
+                              key={i}
+                              className={`h-1.5 flex-1 rounded-full ${i < p.roundsCleared ? "bg-primary" : "bg-muted"
+                                }`}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="col-span-full text-center text-muted-foreground py-8 italic">No placements attended yet.</p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="mb-8 rounded-2xl border border-border bg-card p-6 shadow-card">
+          <h3 className="mb-6 font-display text-xl font-bold text-card-foreground">Academic Summary</h3>
+          <div className="space-y-3">
+            {student.semesters.map((sem: any, idx: number) => (
+              <button
+                key={idx}
+                onClick={() => setSelectedSemester(idx)}
+                className={`flex w-full items-center justify-between rounded-xl p-4 transition-all hover:translate-x-1 ${selectedSemester === idx
+                    ? "bg-primary/10 border-l-4 border-l-primary"
+                    : "bg-muted/30 hover:bg-muted/50"
+                  }`}
+              >
+                <div className="flex items-center gap-4">
+                  <span className="font-display font-semibold">{sem.semesterName}</span>
+                  <span className="text-xs text-muted-foreground">{sem.subjects.length} subjects</span>
+                </div>
+                <div className={`rounded-lg px-3 py-1 text-sm font-bold ${sem.sgpa >= 9 ? "bg-success/20 text-success" :
+                    sem.sgpa >= 7.5 ? "bg-primary/20 text-primary" :
+                      "bg-warning/20 text-warning"
+                  }`}>
+                  {Number(sem.sgpa).toFixed(1)}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mb-6 flex items-center justify-between border-b border-border pb-4">
+          <h3 className="font-display text-xl font-bold">Academic Insights</h3>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Viewing:</span>
+            <span className="rounded-lg bg-primary/20 px-3 py-1 text-xs font-bold text-primary">{currentSemester.semesterName}</span>
           </div>
         </div>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <SubjectBarChart data={currentSemester.subjects} />
-          <SGPATrendChart data={student.semesters.map((s) => ({ semesterName: s.semesterName, sgpa: s.sgpa }))} />
+          <div className="animate-in fade-in slide-in-from-left-4 duration-500">
+            <SGPATrendChart
+              data={student.semesters.map((s: any) => ({ semesterName: s.semesterName, sgpa: s.sgpa }))}
+              onSelectSemester={setSelectedSemester}
+              selectedIndex={selectedSemester}
+            />
+          </div>
+          <div className="animate-in fade-in slide-in-from-right-4 duration-500">
+            <SubjectBarChart data={currentSemester.subjects} />
+          </div>
         </div>
 
-        <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
           <PerformanceGrowthTrend semesters={student.semesters} />
           <WhatIfCalculator semesters={student.semesters} currentCGPA={student.cgpa} />
         </div>
 
-        <div className="mt-6">
-          <CGPALineChart data={student.semesters.map((s) => ({ semesterName: s.semesterName, sgpa: s.sgpa }))} />
+        <div className="mt-8">
+          <CGPALineChart data={student.semesters.map((s: any) => ({ semesterName: s.semesterName, sgpa: s.sgpa }))} />
         </div>
       </main>
     </div>

@@ -1,7 +1,8 @@
 import React from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate, useLocation } from "react-router-dom";
-import { GraduationCap, LogOut, LayoutDashboard, User } from "lucide-react";
+import { LogOut, LayoutDashboard, User } from "lucide-react";
+import NotificationCenter from "./NotificationCenter";
 
 const Navbar = () => {
     const { user, logout } = useAuth();
@@ -73,13 +74,17 @@ const Navbar = () => {
                             Dashboard
                         </button>
                     )}
-                    <button
-                        onClick={handleLogout}
-                        className="ml-2 flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-                    >
-                        <LogOut className="h-4 w-4" />
-                        Logout
-                    </button>
+
+                    <div className="ml-2 pl-2 border-l border-muted-foreground/20 flex items-center gap-2">
+                        <NotificationCenter />
+                        <button
+                            onClick={handleLogout}
+                            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                        >
+                            <LogOut className="h-4 w-4" />
+                            Logout
+                        </button>
+                    </div>
                 </nav>
             </div>
         </header>

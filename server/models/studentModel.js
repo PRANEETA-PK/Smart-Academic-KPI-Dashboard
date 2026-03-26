@@ -28,6 +28,19 @@ const studentSchema = mongoose.Schema(
         batch: { type: String }, // Made optional
         cgpa: { type: Number, default: 0 },
         attendance: { type: Number, default: 0 },
+        yearOfStudy: { type: Number, default: 1 },
+        backlogs: { type: Number, default: 0 },
+        placementData: [
+            {
+                companyName: { type: String, required: true },
+                role: { type: String },
+                status: { type: String, enum: ['Applied', 'In Progress', 'Selected', 'Rejected'], default: 'Applied' },
+                roundsCleared: { type: Number, default: 0 },
+                totalRounds: { type: Number, default: 3 },
+                package: { type: String },
+                date: { type: Date, default: Date.now }
+            }
+        ],
         semesters: [semesterSchema],
     },
     {

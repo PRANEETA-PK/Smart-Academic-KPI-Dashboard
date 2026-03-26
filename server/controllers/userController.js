@@ -1,26 +1,86 @@
 const User = require('../models/userModel');
 const Student = require('../models/studentModel');
+const Notification = require('../models/notificationModel');
 const generateToken = require('../utils/generateToken');
 
 // @desc    Auth user & get token
 // @route   POST /api/users/login
 // @access  Public
 const authUser = async (req, res) => {
-    let { email, password } = req.body;
-    email = email.toLowerCase();
+    try {
+        let { email, password } = req.body;
 
-    const user = await User.findOne({ email });
+        if (!email || !password) {
+            return res.status(400).json({ message: 'Please provide email and password' });
+        }
 
-    if (user && (await user.matchPassword(password))) {
-        res.json({
-            _id: user._id,
-            name: user.name,
-            email: user.email,
-            role: user.role,
-            token: generateToken(user._id),
-        });
-    } else {
-        res.status(401).json({ message: 'Invalid email or password' });
+        console.log(`Login attempt for: ${email}`);
+
+        email = email.toLowerCase().trim();
+        const user = await User.findOne({ email });
+
+        if (!user) {
+            console.warn(`Auth failure: User not found [${email}]`);
+            return res.status(401).json({ message: 'Invalid email or password' });
+        }
+
+        const isMatch = await user.matchPassword(password);
+        if (isMatch) {
+            // ✅ Check if account is locked by admin
+            if (user.active === false) {
+                console.warn(`Auth blocked: Account locked for [${email}]`);
+                return res.status(403).json({
+                    message: 'Your account has been deactivated. Please contact the administrator.'
+                });
+            }
+
+            console.log(`Auth success: ${email}`);
+            res.json({
+                _id: user._id,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                token: generateToken(user._id),
+            });
+        } else {
+            console.warn(`Auth failure: Incorrect password for [${email}]`);
+            res.status(401).json({ message: 'Invalid email or password' });
+        }
+    } catch (error) {
+        console.error(`Login Error: ${error.message}`);
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Get user notifications
+// @route   GET /api/users/notifications
+// @access  Private
+const getNotifications = async (req, res) => {
+    try {
+        const notifications = await Notification.find({ recipient: req.user._id })
+            .sort({ createdAt: -1 })
+            .populate('sender', 'name role');
+        res.json(notifications);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Mark notification as read
+// @route   PUT /api/users/notifications/:id/read
+// @access  Private
+const markNotificationAsRead = async (req, res) => {
+    try {
+        const notification = await Notification.findById(req.params.id);
+        if (notification && notification.recipient.toString() === req.user._id.toString()) {
+            notification.isRead = true;
+            await notification.save();
+            res.json({ message: 'Notification marked as read' });
+        } else {
+            res.status(404).json({ message: 'Notification not found' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: error.message });
     }
 };
 
@@ -28,7 +88,7 @@ const authUser = async (req, res) => {
 // @route   POST /api/users
 // @access  Public
 const registerUser = async (req, res) => {
-    let { name, email, password, role } = req.body;
+    let { name, email, password, role, department } = req.body;
     email = email.toLowerCase();
 
     const userExists = await User.findOne({ email });
@@ -43,6 +103,7 @@ const registerUser = async (req, res) => {
         email,
         password,
         role,
+        department,
     });
 
     if (user) {
@@ -142,4 +203,6 @@ module.exports = {
     registerUser,
     getUserProfile,
     googleAuth,
+    getNotifications,
+    markNotificationAsRead
 };

@@ -3,6 +3,7 @@ import faculty from "@/data/facultyData.json";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 
+// Default demo credentials (all students use password: student123)
 export const credentials = {
     student: { email: "praneeta@university.edu", password: "student123" },
     faculty: { email: "rajesh@university.edu", password: "faculty123" },
