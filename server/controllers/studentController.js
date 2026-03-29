@@ -107,8 +107,142 @@ const bulkUploadStudents = async (req, res) => {
     });
 };
 
+// @desc    Add a project
+// @route   POST /api/students/projects
+// @access  Private (Student)
+const addProject = async (req, res) => {
+    const { title, description, domain, githubUrl, liveUrl, status } = req.body;
+
+    try {
+        const student = await Student.findOne({ user: req.user._id });
+        if (!student) {
+            return res.status(404).json({ message: 'Student not found' });
+        }
+
+        const newProject = {
+            title,
+            description,
+            domain,
+            githubUrl,
+            liveUrl,
+            status: status || 'Completed',
+            submissionDate: new Date()
+        };
+
+        student.projects.push(newProject);
+        await student.save();
+
+        res.status(201).json(student);
+    } catch (error) {
+        res.status(400).json({ message: 'Failed to add project', error: error.message });
+    }
+};
+
+// @desc    Delete a project
+// @route   DELETE /api/students/projects/:projectId
+// @access  Private (Student)
+const deleteProject = async (req, res) => {
+    try {
+        const student = await Student.findOne({ user: req.user._id });
+        if (!student) {
+            return res.status(404).json({ message: 'Student not found' });
+        }
+
+        const projectId = req.params.projectId;
+        student.projects = student.projects.filter(
+            (project) => project._id.toString() !== projectId
+        );
+
+        await student.save();
+        res.status(200).json(student);
+    } catch (error) {
+        res.status(400).json({ message: 'Failed to delete project', error: error.message });
+    }
+};
+
+// @desc    Get pending projects for faculty's department
+// @route   GET /api/students/projects/pending
+// @access  Private (Faculty)
+const getPendingProjectsByDept = async (req, res) => {
+    try {
+        let query = { 'projects.approvalStatus': 'Pending' };
+
+        if (req.user.role === 'faculty') {
+            if (!req.user.department) {
+                return res.status(400).json({ message: 'Faculty department not assigned' });
+            }
+            query.department = req.user.department;
+        }
+
+        const students = await Student.find(query);
+        
+        let pendingProjects = [];
+        students.forEach(student => {
+            student.projects.forEach(project => {
+                if (project.approvalStatus === 'Pending') {
+                    pendingProjects.push({
+                        studentId: student._id,
+                        studentName: student.name,
+                        projectId: project._id,
+                        title: project.title,
+                        domain: project.domain,
+                        githubUrl: project.githubUrl,
+                        liveUrl: project.liveUrl,
+                        description: project.description,
+                        submissionDate: project.submissionDate
+                    });
+                }
+            });
+        });
+
+        res.json(pendingProjects);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Approve/Reject a project
+// @route   PUT /api/students/projects/:studentId/:projectId/status
+// @access  Private (Faculty)
+const updateProjectStatusByFaculty = async (req, res) => {
+    try {
+        const { studentId, projectId } = req.params;
+        const { approvalStatus } = req.body;
+
+        if (!['Approved', 'Rejected'].includes(approvalStatus)) {
+            return res.status(400).json({ message: 'Invalid status' });
+        }
+
+        const student = await Student.findById(studentId);
+        if (!student) {
+            return res.status(404).json({ message: 'Student not found' });
+        }
+
+        // Verify faculty department matches student department
+        if (req.user.role === 'faculty' && req.user.department !== student.department) {
+            return res.status(403).json({ message: 'Unauthorized to modify students outside your department' });
+        }
+
+        const project = student.projects.id(projectId);
+        if (!project) {
+            return res.status(404).json({ message: 'Project not found' });
+        }
+
+        project.approvalStatus = approvalStatus;
+        await student.save();
+
+        res.json({ message: 'Project status updated successfully', project });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 module.exports = {
     getStudentDashboard,
     getAllStudents,
     bulkUploadStudents,
+    addProject,
+    deleteProject,
+    getPendingProjectsByDept,
+    updateProjectStatusByFaculty,
 };

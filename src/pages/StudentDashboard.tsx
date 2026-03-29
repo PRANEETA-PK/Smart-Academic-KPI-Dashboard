@@ -6,8 +6,9 @@ import PerformanceGrowthTrend from "@/components/common/PerformanceGrowthTrend";
 import WhatIfCalculator from "@/components/common/WhatIfCalculator";
 import { StudentAlerts } from "@/components/common/SmartAlerts";
 import AcademicReportPDF from "@/components/common/AcademicReportPDF";
+import ProjectPortfolio from "@/components/common/ProjectPortfolio";
 import { useAuth } from "@/context/AuthContext";
-import { CalendarCheck, TrendingUp, Award, ChevronDown, Briefcase, Building2, CheckCircle2, Clock, XCircle } from "lucide-react";
+import { CalendarCheck, TrendingUp, Award, ChevronDown, Briefcase, Building2, CheckCircle2, Clock, XCircle, AlertTriangle, FileText, BadgeIndianRupee } from "lucide-react";
 
 const StudentDashboard = () => {
   const { token } = useAuth();
@@ -69,10 +70,11 @@ const StudentDashboard = () => {
           <StudentAlerts student={student} />
         </div>
 
-        <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <KPICard title="Semester Attendance" value={`${student.attendance}%`} icon={CalendarCheck} variant={student.attendance < 75 ? "destructive" : "primary"} trend={currentSemester.semesterName} />
           <KPICard title="Semester SGPA" value={Number(currentSemester.sgpa || 0).toFixed(2)} icon={TrendingUp} variant="success" trend={currentSemester.semesterName} />
           <KPICard title="Cumulative CGPA" value={Number(student.cgpa).toFixed(2)} icon={Award} variant={student.cgpa < 7 ? "warning" : "primary"} />
+          <KPICard title="Active Backlogs" value={student.backlogs || 0} icon={AlertTriangle} variant={student.backlogs > 0 ? "destructive" : "success"} trend={student.backlogs > 0 ? "Needs Attention" : "Clear"} />
         </div>
 
         {/* Feature: Placement Tracker (Dynamic based on year) */}
@@ -109,6 +111,13 @@ const StudentDashboard = () => {
                       </div>
                       <h4 className="font-bold text-foreground">{p.companyName}</h4>
                       <p className="text-xs text-muted-foreground mb-3">{p.role}</p>
+
+                      {p.package && (
+                        <div className="mb-3 flex items-center gap-1 text-sm font-medium text-success">
+                          <BadgeIndianRupee className="h-4 w-4" />
+                          <span>{p.package}</span>
+                        </div>
+                      )}
 
                       <div className="space-y-2">
                         <div className="flex justify-between text-[10px] text-muted-foreground font-medium">
@@ -183,10 +192,59 @@ const StudentDashboard = () => {
           </div>
         </div>
 
+        {/* Detailed Coursework Table */}
+        <div className="mt-8 overflow-hidden rounded-2xl border border-border bg-card shadow-card animate-fade-in">
+          <div className="flex items-center gap-3 border-b border-border bg-muted/30 p-6">
+            <FileText className="h-6 w-6 text-primary" />
+            <div>
+              <h3 className="font-display text-lg font-semibold">Detailed Coursework - {currentSemester.semesterName}</h3>
+              <p className="text-xs text-muted-foreground">Comprehensive view of subject grades, marks, and credits</p>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-muted/50 text-muted-foreground">
+                <tr>
+                  <th className="px-6 py-4 font-semibold">Subject Code</th>
+                  <th className="px-6 py-4 font-semibold">Subject Name</th>
+                  <th className="px-6 py-4 font-semibold text-center">Credits</th>
+                  <th className="px-6 py-4 font-semibold text-center">Marks</th>
+                  <th className="px-6 py-4 font-semibold text-center">Grade</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {currentSemester.subjects.map((sub: any, i: number) => (
+                  <tr key={i} className="transition-colors hover:bg-muted/30">
+                    <td className="px-6 py-4 font-medium text-muted-foreground">{sub.code || 'N/A'}</td>
+                    <td className="px-6 py-4 font-semibold text-foreground">{sub.subjectName || sub.name}</td>
+                    <td className="px-6 py-4 text-center">{sub.credits || '-'}</td>
+                    <td className="px-6 py-4 text-center">
+                      <span className="inline-flex items-center justify-center rounded-md bg-primary/10 px-2 py-1 text-xs font-bold text-primary">
+                        {sub.marks}/100
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className={`inline-flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${
+                        ['O', 'A+', 'A'].includes(sub.grade) ? 'bg-success/20 text-success' :
+                        ['B+', 'B', 'C'].includes(sub.grade) ? 'bg-warning/20 text-warning' :
+                        'bg-destructive/10 text-destructive'
+                      }`}>
+                        {sub.grade || '-'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
           <PerformanceGrowthTrend semesters={student.semesters} />
           <WhatIfCalculator semesters={student.semesters} currentCGPA={student.cgpa} />
         </div>
+
+        <ProjectPortfolio student={student} onProjectAdded={(updatedStudent: any) => setStudent(updatedStudent)} />
 
         <div className="mt-8">
           <CGPALineChart data={student.semesters.map((s: any) => ({ semesterName: s.semesterName, sgpa: s.sgpa }))} />

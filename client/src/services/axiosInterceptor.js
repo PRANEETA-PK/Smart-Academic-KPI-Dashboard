@@ -1,5 +1,10 @@
 import axios from "axios";
 
+// Automatically use the Render URL in production, or localhost during development
+axios.defaults.baseURL = import.meta.env.PROD 
+    ? import.meta.env.VITE_API_URL 
+    : "http://localhost:5000";
+
 const setupAxiosInterceptors = () => {
     axios.interceptors.request.use(
         (config) => {

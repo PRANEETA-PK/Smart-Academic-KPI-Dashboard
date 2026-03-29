@@ -10,9 +10,11 @@ import { StudentAlerts } from "@/components/common/SmartAlerts";
 import AIInsights from "@/components/common/AIInsights";
 import AcademicReportPDF from "@/components/common/AcademicReportPDF";
 import PlacementDetails from "@/components/common/PlacementDetails";
+import WhatIfCalculator from "@/components/common/WhatIfCalculator";
 import { useAuth } from "@/context/AuthContext";
 import { studentService } from "@/services/studentService";
-import { BookOpen, GraduationCap, TrendingUp, AlertTriangle, Users, Loader2 } from "lucide-react";
+import { BookOpen, GraduationCap, TrendingUp, AlertTriangle, Users, Loader2, FileText, BadgeIndianRupee } from "lucide-react";
+import ProjectPortfolio from "@/components/common/ProjectPortfolio";
 
 const StudentDashboard = () => {
     const { user } = useAuth();
@@ -137,9 +139,68 @@ const StudentDashboard = () => {
                             </div>
                             <div className="space-y-6">
                                 <StudentAlerts student={student} />
+                                {activeTab === "overview" && <WhatIfCalculator semesters={semesters} currentCGPA={student.cgpa} />}
                                 {activeTab === "overview" && <PerformanceGrowthTrend semesters={semesters} />}
                             </div>
                         </div>
+
+                        {/* Skill Alignment & Career Roadmap */}
+                        <div className="mt-8 rounded-2xl border border-border bg-card p-6 shadow-card animate-fade-in relative overflow-hidden">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 blur-3xl"></div>
+                            <div className="flex items-center gap-3 mb-6">
+                                <TrendingUp className="h-6 w-6 text-primary" />
+                                <div>
+                                    <h3 className="font-display text-lg font-semibold">Professional Skill Readiness Matrix</h3>
+                                    <p className="text-xs text-muted-foreground">Mapping academic performance to industry-relevant skill domains</p>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {latestSem.subjects.map((sub, i) => {
+                                    const proficiency = sub.marks >= 90 ? "Expert" : sub.marks >= 75 ? "Advanced" : "Intermediate";
+                                    const colors = {
+                                        "Expert": "bg-success/10 text-success border-success/20",
+                                        "Advanced": "bg-primary/10 text-primary border-primary/20",
+                                        "Intermediate": "bg-warning/10 text-warning border-warning/20"
+                                    };
+
+                                    return (
+                                        <div key={i} className="group p-4 rounded-xl border border-border bg-muted/20 hover:border-primary/30 transition-all hover:shadow-glow-soft">
+                                            <div className="flex justify-between items-start mb-2">
+                                                <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Domain Focus</span>
+                                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${colors[proficiency]}`}>
+                                                    {proficiency}
+                                                </span>
+                                            </div>
+                                            <h4 className="font-bold text-foreground mb-3">{sub.subjectName || sub.name}</h4>
+                                            <div className="space-y-2">
+                                                <div className="flex justify-between text-[10px] font-medium text-muted-foreground">
+                                                    <span>Gained Competency</span>
+                                                    <span>{sub.marks}%</span>
+                                                </div>
+                                                <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                                                    <div
+                                                        className={`h-full transition-all duration-1000 ${
+                                                            sub.marks >= 90 ? 'bg-success shadow-[0_0_8px_rgba(34,197,94,0.4)]' :
+                                                            sub.marks >= 75 ? 'bg-primary' : 'bg-warning'
+                                                        }`}
+                                                        style={{ width: `${sub.marks}%` }}
+                                                    ></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+
+                                {latestSem.subjects.length === 0 && (
+                                    <div className="col-span-full py-8 text-center text-muted-foreground italic">
+                                        No recent subject data to map skills.
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <ProjectPortfolio student={student} onProjectAdded={(updatedStudent) => setStudent(updatedStudent)} />
                     </div>
                 </main>
             </div>

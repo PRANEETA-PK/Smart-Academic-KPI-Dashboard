@@ -4,7 +4,8 @@ import KPICard from "@/components/common/KPICard";
 import { FacultyAlerts } from "@/components/common/SmartAlerts";
 import AcademicReportPDF from "@/components/common/AcademicReportPDF";
 import { studentService } from "@/services/studentService";
-import { Users, TrendingUp, AlertTriangle, Search, ArrowUpDown } from "lucide-react";
+import { toast } from "sonner";
+import { Users, TrendingUp, AlertTriangle, Search, ArrowUpDown, Code, CheckCircle2, XCircle, ExternalLink } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 
 const FacultyDashboard = () => {
@@ -13,15 +14,20 @@ const FacultyDashboard = () => {
     const [sortDir, setSortDir] = useState("asc");
     const [selectedStudent, setSelectedStudent] = useState(null);
     const [students, setStudents] = useState([]);
+    const [pendingProjects, setPendingProjects] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchStudents = async () => {
             try {
-                const data = await studentService.getAllStudents();
+                const [data, projectsData] = await Promise.all([
+                    studentService.getAllStudents(),
+                    studentService.getPendingProjects()
+                ]);
                 setStudents(Array.isArray(data) ? data : []);
+                setPendingProjects(Array.isArray(projectsData) ? projectsData : []);
             } catch (err) {
-                console.error("Failed to fetch students:", err);
+                console.error("Failed to fetch data:", err);
                 setStudents([]);
             } finally {
                 setLoading(false);
@@ -67,6 +73,16 @@ const FacultyDashboard = () => {
         if (s.cgpa < 7)
             return <span className="inline-flex items-center rounded-full bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">Monitor</span>;
         return <span className="inline-flex items-center rounded-full bg-success/10 px-2 py-0.5 text-xs font-medium text-success">Good</span>;
+    };
+
+    const handleProjectStatusUpdate = async (studentId, projectId, newStatus) => {
+        try {
+            await studentService.updateProjectStatus(studentId, projectId, { approvalStatus: newStatus });
+            toast.success(`Project ${newStatus} Successfully`);
+            setPendingProjects(prev => prev.filter(p => p.projectId !== projectId));
+        } catch (error) {
+            toast.error("Failed to update project status");
+        }
     };
 
     const sgpaDistribution = [
@@ -134,6 +150,59 @@ const FacultyDashboard = () => {
                     </div>
                 </div>
 
+                {pendingProjects.length > 0 && (
+                    <div className="mb-8 rounded-xl border border-destructive/20 bg-card p-5 shadow-card shadow-destructive/10 animate-fade-in relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-1 h-full bg-destructive/80"></div>
+                        <div className="mb-4 flex items-center gap-2">
+                            <Code className="h-5 w-5 text-destructive" />
+                            <h3 className="font-display text-base font-semibold text-card-foreground">Pending Project Approvals</h3>
+                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground animate-pulse shadow-md">
+                                {pendingProjects.length}
+                            </span>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {pendingProjects.map((proj, idx) => (
+                                <div key={proj.projectId || proj._id || `proj-${idx}`} className="flex flex-col justify-between rounded-xl border border-border bg-background p-5 shadow-card hover:shadow-glow-soft transition-all">
+                                    <div>
+                                        <div className="mb-3 flex items-center justify-between">
+                                            <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-bold uppercase text-primary tracking-wider">
+                                                {proj.domain}
+                                            </span>
+                                            <span className="text-[10px] text-muted-foreground font-semibold">
+                                                {new Date(proj.submissionDate).toLocaleDateString()}
+                                            </span>
+                                        </div>
+                                        <h4 className="font-bold text-foreground mb-1">{proj.title}</h4>
+                                        <p className="text-xs text-muted-foreground mb-3 flex items-center gap-1.5 font-medium">
+                                            <Users className="h-3.5 w-3.5" /> {proj.studentName}
+                                        </p>
+                                        {proj.description && <p className="text-xs text-muted-foreground line-clamp-2 mb-4">{proj.description}</p>}
+                                        
+                                        <div className="mb-6 flex items-center gap-3 border-t border-border pt-4">
+                                            <a href={proj.githubUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors">
+                                                Code<ExternalLink className="h-3 w-3" /> 
+                                            </a>
+                                            {proj.liveUrl && (
+                                                <a href={proj.liveUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline transition-colors">
+                                                    Demo<ExternalLink className="h-3 w-3" /> 
+                                                </a>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <button onClick={() => handleProjectStatusUpdate(proj.studentId, proj.projectId, 'Approved')} className="inline-flex flex-1 items-center justify-center rounded-md text-xs font-medium bg-success text-success-foreground hover:bg-success/90 h-9 gap-2 transition-colors">
+                                            <CheckCircle2 className="h-4 w-4" /> Approve
+                                        </button>
+                                        <button onClick={() => handleProjectStatusUpdate(proj.studentId, proj.projectId, 'Rejected')} className="inline-flex flex-1 items-center justify-center rounded-md border border-destructive bg-transparent hover:bg-destructive/10 text-destructive text-xs font-medium h-9 gap-2 transition-colors">
+                                            <XCircle className="h-4 w-4" /> Reject
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
                 <div className="rounded-xl border border-border bg-card shadow-card">
                     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-5">
                         <h3 className="font-display text-base font-semibold text-card-foreground">Student Performance</h3>
@@ -145,8 +214,8 @@ const FacultyDashboard = () => {
                                     className="appearance-none rounded-lg border border-input bg-background py-2 pl-3 pr-8 text-sm outline-none transition-colors focus:border-primary"
                                 >
                                     <option value="">Select for PDF…</option>
-                                    {students.map((s) => (
-                                        <option key={s.id} value={s.id}>{s.name}</option>
+                                    {students.map((s, idx) => (
+                                        <option key={s.id || s._id || `opt-${idx}`} value={s.id || s._id}>{s.name}</option>
                                     ))}
                                 </select>
                             </div>
@@ -179,8 +248,8 @@ const FacultyDashboard = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredStudents.map((s) => (
-                                    <tr key={s.id || s._id} className="border-b border-border transition-colors last:border-0 hover:bg-muted/30">
+                                {filteredStudents.map((s, idx) => (
+                                    <tr key={s.id || s._id || `row-${idx}`} className="border-b border-border transition-colors last:border-0 hover:bg-muted/30">
                                         <td className="px-5 py-3.5 text-sm font-medium text-foreground">{s.name}</td>
                                         <td className="px-5 py-3.5 text-sm text-muted-foreground">{s.email}</td>
                                         <td className="px-5 py-3.5 text-sm text-foreground">

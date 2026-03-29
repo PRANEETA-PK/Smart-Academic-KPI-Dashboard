@@ -24,25 +24,43 @@ const GlobalLoader = () => (
     </div>
 );
 
-const App = () => (
-    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
-        <AuthProvider>
-            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-                <Suspense fallback={<GlobalLoader />}>
-                    <Routes>
-                        <Route path="/" element={<Index />} />
-                        <Route path="/login" element={<Login />} />
-                        <Route path="/register" element={<Register />} />
-                        <Route path="/student" element={<ProtectedRoute allowedRoles={["student"]}><StudentDashboard /></ProtectedRoute>} />
-                        <Route path="/student/profile" element={<ProtectedRoute allowedRoles={["student"]}><StudentProfile /></ProtectedRoute>} />
-                        <Route path="/faculty" element={<ProtectedRoute allowedRoles={["faculty"]}><FacultyDashboard /></ProtectedRoute>} />
-                        <Route path="/admin" element={<ProtectedRoute allowedRoles={["admin"]}><AdminDashboard /></ProtectedRoute>} />
-                        <Route path="*" element={<NotFound />} />
-                    </Routes>
-                </Suspense>
-            </BrowserRouter>
-        </AuthProvider>
-    </GoogleOAuthProvider>
-);
+const App = () => {
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+    // Separate children for reuse
+    const routesContent = (
+        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+            <Suspense fallback={<GlobalLoader />}>
+                <Routes>
+                    <Route path="/" element={<Index />} />
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/register" element={<Register />} />
+                    <Route path="/student" element={<ProtectedRoute allowedRoles={["student"]}><StudentDashboard /></ProtectedRoute>} />
+                    <Route path="/student/profile" element={<ProtectedRoute allowedRoles={["student"]}><StudentProfile /></ProtectedRoute>} />
+                    <Route path="/faculty" element={<ProtectedRoute allowedRoles={["faculty"]}><FacultyDashboard /></ProtectedRoute>} />
+                    <Route path="/admin" element={<ProtectedRoute allowedRoles={["admin"]}><AdminDashboard /></ProtectedRoute>} />
+                    <Route path="*" element={<NotFound />} />
+                </Routes>
+            </Suspense>
+        </BrowserRouter>
+    );
+
+    // If Google Client ID is missing, still render the app but skip the provider that causes warnings
+    if (!clientId) {
+        return (
+            <AuthProvider>
+                {routesContent}
+            </AuthProvider>
+        );
+    }
+
+    return (
+        <GoogleOAuthProvider clientId={clientId}>
+            <AuthProvider>
+                {routesContent}
+            </AuthProvider>
+        </GoogleOAuthProvider>
+    );
+};
 
 export default App;

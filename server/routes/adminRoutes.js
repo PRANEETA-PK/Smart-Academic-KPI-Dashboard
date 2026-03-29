@@ -9,7 +9,9 @@ const {
     deleteUser,
     createFaculty,
     sendIndividualNotification,
-    getStudentsAdvanced
+    getStudentsAdvanced,
+    getPendingProjects,
+    updateProjectStatus
 } = require('../controllers/adminController');
 const { protect, admin } = require('../middleware/authMiddleware');
 
@@ -25,5 +27,7 @@ router.delete('/users/:id', deleteUser);
 router.post('/faculty', createFaculty);
 router.post('/notify-individual', sendIndividualNotification);
 router.post('/notify-risk', notifyAtRiskStudents);
+router.get('/projects/pending', getPendingProjects);
+router.put('/projects/:studentId/:projectId/status', updateProjectStatus);
 
 module.exports = router;

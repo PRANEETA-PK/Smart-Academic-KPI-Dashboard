@@ -8,7 +8,7 @@ import {
     Users, BookOpen, GraduationCap, TrendingUp, Activity,
     Search, History, BarChart2, ShieldCheck,
     FileUp, Mail, AlertCircle, Trash2,
-    LayoutGrid, List, UserCog, ExternalLink, ArrowRight
+    LayoutGrid, List, UserCog, ExternalLink, ArrowRight, Code, CheckCircle2, XCircle
 } from "lucide-react";
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -47,6 +47,10 @@ const AdminDashboard = () => {
     const [uploading, setUploading] = useState(false);
     const [logSearch, setLogSearch] = useState("");
     const [isSendingEmail, setIsSendingEmail] = useState(false);
+    
+    // Pagination State
+    const [currentPage, setCurrentPage] = useState(1);
+    const usersPerPage = 8;
 
     // New Staff State
     const [isAddStaffOpen, setIsAddStaffOpen] = useState(false);
@@ -162,6 +166,7 @@ const AdminDashboard = () => {
 
     const handleSendMessage = async (e) => {
         e.preventDefault();
+        if (isSendingEmail) return;
         setIsSendingEmail(true);
         try {
             const res = await adminService.sendNotification({
@@ -224,6 +229,18 @@ const AdminDashboard = () => {
             (u.role || "").toLowerCase().includes(searchTerm.toLowerCase())
         );
     }, [users, searchTerm]);
+
+    const paginatedUsers = useMemo(() => {
+        const startIndex = (currentPage - 1) * usersPerPage;
+        return filteredUsers.slice(startIndex, startIndex + usersPerPage);
+    }, [filteredUsers, currentPage]);
+
+    const totalPages = Math.ceil(filteredUsers.length / usersPerPage) || 1;
+
+    // Reset page when search changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm]);
 
     const filteredLogs = useMemo(() => {
         return (auditLogs || []).filter(log =>
@@ -490,7 +507,7 @@ const AdminDashboard = () => {
                                     </thead>
                                     <tbody className="divide-y divide-border">
                                         {filteredUsers.length > 0 ? (
-                                            filteredUsers.map((user) => (
+                                            paginatedUsers.map((user) => (
                                                 <tr key={user._id} className="hover:bg-muted/30 transition-colors">
                                                     <td className="px-6 py-4">
                                                         <div className="flex items-center gap-3">
@@ -594,7 +611,7 @@ const AdminDashboard = () => {
                                                                                 required
                                                                             />
                                                                         </div>
-                                                                        <Button type="submit" className="w-full h-10 text-xs font-bold uppercase tracking-widest mt-2" disabled={isSendingEmail}>
+                                                                        <Button type="submit" className="w-full h-10 text-xs font-bold uppercase tracking-widest mt-2">
                                                                             {isSendingEmail ? "Sending Email..." : `📧 Send Email to ${selectedUser?.name}`}
                                                                         </Button>
                                                                     </form>
@@ -621,6 +638,36 @@ const AdminDashboard = () => {
                                         )}
                                     </tbody>
                                 </table>
+                            </div>
+
+                            {/* Pagination Controls */}
+                            <div className="p-4 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
+                                <p className="text-xs text-muted-foreground font-medium italic">
+                                    Displaying entries {(currentPage - 1) * usersPerPage + 1} – {Math.min(currentPage * usersPerPage, filteredUsers.length)} of {filteredUsers.length} total users
+                                </p>
+                                <div className="flex items-center gap-1.5">
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        className="h-8 rounded-lg"
+                                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                        disabled={currentPage === 1}
+                                    >Previous</Button>
+                                    
+                                    <div className="flex items-center gap-1 px-3">
+                                        <span className="text-xs font-bold text-primary">Page {currentPage}</span>
+                                        <span className="text-xs text-muted-foreground">/</span>
+                                        <span className="text-xs font-semibold text-muted-foreground">{totalPages}</span>
+                                    </div>
+
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        className="h-8 rounded-lg"
+                                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                        disabled={currentPage === totalPages}
+                                    >Next</Button>
+                                </div>
                             </div>
                         </div>
                     </TabsContent>

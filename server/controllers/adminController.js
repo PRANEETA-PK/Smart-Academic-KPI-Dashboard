@@ -344,6 +344,69 @@ const getStudentsAdvanced = async (req, res) => {
     }
 };
 
+// @desc    Get all pending projects
+// @route   GET /api/admin/projects/pending
+// @access  Private (Admin)
+const getPendingProjects = async (req, res) => {
+    try {
+        const students = await Student.find({ 'projects.approvalStatus': 'Pending' });
+        
+        let pendingProjects = [];
+        students.forEach(student => {
+            student.projects.forEach(project => {
+                if (project.approvalStatus === 'Pending') {
+                    pendingProjects.push({
+                        studentId: student._id,
+                        studentName: student.name,
+                        projectId: project._id,
+                        title: project.title,
+                        domain: project.domain,
+                        githubUrl: project.githubUrl,
+                        liveUrl: project.liveUrl,
+                        description: project.description,
+                        submissionDate: project.submissionDate
+                    });
+                }
+            });
+        });
+
+        res.json(pendingProjects);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Approve/Reject a project
+// @route   PUT /api/admin/projects/:studentId/:projectId/status
+// @access  Private (Admin)
+const updateProjectStatus = async (req, res) => {
+    try {
+        const { studentId, projectId } = req.params;
+        const { approvalStatus } = req.body; // 'Approved' or 'Rejected'
+
+        if (!['Approved', 'Rejected'].includes(approvalStatus)) {
+            return res.status(400).json({ message: 'Invalid status' });
+        }
+
+        const student = await Student.findById(studentId);
+        if (!student) {
+            return res.status(404).json({ message: 'Student not found' });
+        }
+
+        const project = student.projects.id(projectId);
+        if (!project) {
+            return res.status(404).json({ message: 'Project not found' });
+        }
+
+        project.approvalStatus = approvalStatus;
+        await student.save();
+
+        res.json({ message: 'Project status updated successfully', project });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 module.exports = {
     getDashboardStats,
     getAuditLogs,
@@ -353,5 +416,7 @@ module.exports = {
     deleteUser,
     createFaculty,
     sendIndividualNotification,
-    getStudentsAdvanced
+    getStudentsAdvanced,
+    getPendingProjects,
+    updateProjectStatus
 };

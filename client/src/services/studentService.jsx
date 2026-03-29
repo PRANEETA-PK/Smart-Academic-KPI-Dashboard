@@ -40,5 +40,25 @@ export const studentService = {
             console.error("Error in bulk upload:", error);
             throw error;
         }
+    },
+
+    getPendingProjects: async () => {
+        try {
+            const response = await axios.get("/api/students/projects/pending");
+            return response.data;
+        } catch (error) {
+            console.error("Error fetching pending projects:", error);
+            return [];
+        }
+    },
+
+    updateProjectStatus: async (studentId, projectId, statusData) => {
+        try {
+            const response = await axios.put(`/api/students/projects/${studentId}/${projectId}/status`, statusData);
+            return response.data;
+        } catch (error) {
+            console.error("Error updating project status:", error);
+            throw error;
+        }
     }
 };

@@ -14,6 +14,17 @@ const semesterSchema = mongoose.Schema({
     subjects: [subjectSchema],
 });
 
+const projectSchema = mongoose.Schema({
+    title: { type: String, required: true },
+    description: { type: String },
+    domain: { type: String, required: true },
+    githubUrl: { type: String, required: true },
+    liveUrl: { type: String },
+    status: { type: String, enum: ['Completed', 'In Progress'], default: 'Completed' },
+    approvalStatus: { type: String, enum: ['Pending', 'Approved', 'Rejected'], default: 'Pending' },
+    submissionDate: { type: Date, default: Date.now }
+});
+
 const studentSchema = mongoose.Schema(
     {
         user: {
@@ -42,6 +53,7 @@ const studentSchema = mongoose.Schema(
             }
         ],
         semesters: [semesterSchema],
+        projects: [projectSchema],
     },
     {
         timestamps: true,
