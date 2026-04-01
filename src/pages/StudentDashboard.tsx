@@ -19,7 +19,8 @@ const StudentDashboard = () => {
   useEffect(() => {
     const fetchStudentData = async () => {
       try {
-        const res = await fetch("http://localhost:5000/api/students/dashboard", {
+        const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+        const res = await fetch(`${API_URL}/students/dashboard`, {
           headers: { "Authorization": `Bearer ${token}` }
         });
         if (res.ok) {
