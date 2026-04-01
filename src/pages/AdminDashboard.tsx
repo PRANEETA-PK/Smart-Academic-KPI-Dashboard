@@ -101,10 +101,11 @@ const AdminDashboard = () => {
       try {
         const headers = { "Authorization": `Bearer ${token}` };
 
+        const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
         const [statsRes, logsRes, usersRes] = await Promise.all([
-          fetch("http://localhost:5000/api/admin/stats", { headers }),
-          fetch("http://localhost:5000/api/admin/audit-logs", { headers }),
-          fetch("http://localhost:5000/api/admin/users", { headers })
+          fetch(`${API_URL}/admin/stats`, { headers }),
+          fetch(`${API_URL}/admin/audit-logs`, { headers }),
+          fetch(`${API_URL}/admin/users`, { headers })
         ]);
 
         if (statsRes.ok) {
@@ -127,7 +128,8 @@ const AdminDashboard = () => {
 
   const handleNotifyRisk = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/admin/notify-risk", {
+      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+      const res = await fetch(`${API_URL}/admin/notify-risk`, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -146,7 +148,8 @@ const AdminDashboard = () => {
 
   const toggleUserStatus = async (user: any) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/admin/users/${user._id}/status`, {
+      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+      const res = await fetch(`${API_URL}/admin/users/${user._id}/status`, {
         method: "PUT",
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -167,7 +170,8 @@ const AdminDashboard = () => {
 
   const toggleAdmin = async (user: any) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/admin/users/${user._id}/status`, {
+      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+      const res = await fetch(`${API_URL}/admin/users/${user._id}/status`, {
         method: "PUT",
         headers: {
           "Authorization": `Bearer ${token}`,
