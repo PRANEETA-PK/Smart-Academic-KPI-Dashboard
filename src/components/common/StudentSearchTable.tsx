@@ -3,7 +3,9 @@ import { useAuth } from "@/context/AuthContext";
 import { Search, ChevronLeft, ChevronRight, AlertTriangle, GraduationCap, TrendingUp, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+const envUrl = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+const clean = envUrl.endsWith("/api") ? envUrl.slice(0, -4) : envUrl;
+const API_URL = `${clean}/api`;
 
 interface Student {
   _id: string;

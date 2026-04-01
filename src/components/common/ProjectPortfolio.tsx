@@ -25,7 +25,9 @@ export default function ProjectPortfolio({ student, onProjectAdded }: any) {
     e.preventDefault();
     setLoading(true);
     try {
-      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+      const envUrl = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+      const clean = envUrl.endsWith("/api") ? envUrl.slice(0, -4) : envUrl;
+      const API_URL = `${clean}/api`;
       const res = await fetch(`${API_URL}/students/projects`, {
         method: "POST",
         headers: {
